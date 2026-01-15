@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tapper Mini Game</title>
+<style>
+body{margin:0;font-family:Arial;text-align:center;background:#111;color:#fff}
+button{font-size:24px;padding:16px 24px;border-radius:14px}
+#box{margin-top:30px}
+</style>
+</head>
+<body>
+<h2>👾 TAP GAME</h2>
+<p>Тапай сколько хочешь</p>
+<button onclick="tap()">TAP</button>
+<div id="box">
+<p id="xp">XP: 0</p>
+<p id="time">Time: 0s</p>
+</div>
+<script>
+let xp=0,start=Date.now(),blocked=false;
+function tap(){
+ if(blocked)return;
+ xp++;xpEl.innerText="XP: "+xp;
+}
+setInterval(()=>{
+ let t=Math.floor((Date.now()-start)/1000);
+ timeEl.innerText="Time: "+t+"s";
+ if(t>=300 && !blocked){
+   blocked=true;
+   alert("Чтобы продолжить игру — подпишись на каналы и напиши боту /continue");
+ }
+},1000);
+const xpEl=document.getElementById("xp");
+const timeEl=document.getElementById("time");
+</script>
+</body>
+</html>
