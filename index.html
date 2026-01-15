@@ -3,53 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pixel Rogue World</title>
-
+<title>Pixel Rogue</title>
 <style>
-html,body{
-  margin:0;
-  background:#87c38f;
-  font-family:monospace;
-  overflow:hidden;
-}
-#ui{
-  position:fixed;
-  top:6px;
-  left:50%;
-  transform:translateX(-50%);
-  background:rgba(0,0,0,.5);
-  color:#fff;
-  padding:6px 10px;
-  border-radius:10px;
-  font-size:14px;
-}
-#ui span{margin:0 6px}
-#overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.7);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-.panel{
-  background:#1f2937;
-  color:#fff;
-  padding:16px;
-  border-radius:12px;
-  width:90%;
-  max-width:320px;
-  text-align:center;
-}
-button{
-  background:#2563eb;
-  border:none;
-  color:#fff;
-  padding:6px 10px;
-  margin:4px;
-  border-radius:6px;
-}
+html,body{margin:0;overflow:hidden;background:#000;font-family:monospace}
 canvas{display:block}
+#ui{
+position:fixed;top:6px;left:50%;transform:translateX(-50%);
+background:rgba(0,0,0,.6);color:#fff;padding:6px 10px;
+border-radius:10px;font-size:14px
+}
+#mini{
+position:fixed;right:8px;top:8px;
+border:2px solid #fff;background:#111
+}
 </style>
 </head>
 <body>
@@ -58,198 +24,190 @@ canvas{display:block}
 ❤️ <span id="hp"></span>
 ⚔️ <span id="atk"></span>
 💰 <span id="gold"></span>
-🌊 <span id="wave"></span>
-⏱ <span id="time"></span>s
+✨ <span id="lvl"></span>
+🌍 <span id="biome"></span>
+⏱ <span id="wave"></span>
 </div>
 
 <canvas id="c"></canvas>
-
-<div id="overlay">
-  <div class="panel" id="panel"></div>
-</div>
+<canvas id="mini" width="120" height="120"></canvas>
 
 <script>
-/* ---------- SETUP ---------- */
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
-resize();
-window.addEventListener("resize", resize);
+const c=document.getElementById("c"),ctx=c.getContext("2d");
+const mcv=document.getElementById("mini"),mctx=mcv.getContext("2d");
+resize();onresize=resize;
+function resize(){c.width=innerWidth;c.height=innerHeight;}
 
-function resize(){
-  c.width = window.innerWidth;
-  c.height = window.innerHeight;
-}
-
-const TILE = 32;
-const VIEW = 20;
-
-/* ---------- PLAYER ---------- */
-let player = {
-  x:0,y:0,
-  px:0,py:0,
-  hp:100,maxHp:100,
-  atk:6,
-  gold:0,
-  speed:2.2,
-  regen:0.01
+const player={
+x:0,y:0,hp:100,maxHp:100,
+atk:6,gold:0,exp:0,lvl:1,
+speed:2.2,atkCd:0
 };
 
-/* ---------- WORLD ---------- */
-function tile(x,y){
-  let n = Math.sin(x*12.989+y*78.233)*43758.5453;
-  n = n-Math.floor(n);
-  if(n<0.1) return "water";
-  if(n<0.2) return "rock";
-  return "grass";
-}
+let monsters=[],coins=[];
+let wave=1,lastWave=Date.now();
+let difficulty=1;
 
-/* ---------- MONSTERS ---------- */
-let monsters=[];
-let wave=1;
+const BIOMES=[
+{n:"Луг",c:"#4ade80",types:["slime"]},
+{n:"Лес",c:"#16a34a",types:["wolf"]},
+{n:"Проклятый",c:"#7f1d1d",types:["demon"]}
+];
+
+function biomeAt(x,y){
+let d=Math.hypot(x,y);
+if(d<2000)return 0;
+if(d<4000)return 1;
+return 2;
+}
 
 function spawnMonster(){
-  monsters.push({
-    x:player.x+(Math.random()*600-300),
-    y:player.y+(Math.random()*600-300),
-    hp:30+wave*10,
-    maxHp:30+wave*10,
-    atk:4+wave,
-    speed:0.8+Math.random()*0.6,
-    cd:0
-  });
+let a=Math.random()*Math.PI*2;
+let b=biomeAt(player.x,player.y);
+let type=BIOMES[b].types[Math.random()*BIOMES[b].types.length|0];
+let base={
+slime:{hp:40,s:0.6,atk:4},
+wolf:{hp:25,s:1.2,atk:6},
+demon:{hp:60,s:0.8,atk:10}
+}[type];
+monsters.push({
+type,
+x:player.x+Math.cos(a)*300,
+y:player.y+Math.sin(a)*300,
+hp:base.hp*difficulty,
+maxHp:base.hp*difficulty,
+speed:base.s,
+atk:base.atk*difficulty,
+kbx:0,kby:0,flash:0
+});
 }
-for(let i=0;i<5;i++) spawnMonster();
 
-/* ---------- INPUT ---------- */
 let keys={};
-document.addEventListener("keydown",e=>keys[e.key]=true);
-document.addEventListener("keyup",e=>keys[e.key]=false);
-
-/* ---------- SHOP ---------- */
-function openShop(){
-  show(`
-  <h3>Магазин</h3>
-  💉 HP +20 — 20💰<br><button onclick="buyHP()">Купить</button><br><br>
-  ⚔️ Урон +2 — 30💰<br><button onclick="buyATK()">Купить</button><br><br>
-  ❤️ Реген — 40💰<br><button onclick="buyRegen()">Купить</button><br><br>
-  <button onclick="close()">Закрыть</button>
-  `);
-}
-function buyHP(){ if(player.gold>=20){player.gold-=20;player.maxHp+=20;player.hp+=20;} }
-function buyATK(){ if(player.gold>=30){player.gold-=30;player.atk+=2;} }
-function buyRegen(){ if(player.gold>=40){player.gold-=40;player.regen+=0.02;} }
-
-/* ---------- UI ---------- */
-function show(t){ overlay.style.display="flex"; panel.innerHTML=t; }
-function close(){ overlay.style.display="none"; }
-
-/* ---------- GAME LOOP ---------- */
-let start = Date.now();
-function loop(){
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-loop();
+onkeydown=e=>keys[e.key]=1;
+onkeyup=e=>keys[e.key]=0;
 
 function update(){
-  // time
-  document.getElementById("time").textContent =
-    Math.floor((Date.now()-start)/1000);
+let dx=0,dy=0;
+if(keys.a||keys.ArrowLeft)dx--;
+if(keys.d||keys.ArrowRight)dx++;
+if(keys.w||keys.ArrowUp)dy--;
+if(keys.s||keys.ArrowDown)dy++;
+let l=Math.hypot(dx,dy)||1;
+player.x+=dx/l*player.speed;
+player.y+=dy/l*player.speed;
 
-  // move player
-  let dx=0,dy=0;
-  if(keys["a"]||keys["ArrowLeft"])dx--;
-  if(keys["d"]||keys["ArrowRight"])dx++;
-  if(keys["w"]||keys["ArrowUp"])dy--;
-  if(keys["s"]||keys["ArrowDown"])dy++;
-  let len=Math.hypot(dx,dy)||1;
-  player.x+=dx/len*player.speed;
-  player.y+=dy/len*player.speed;
+player.atkCd=Math.max(0,player.atkCd-1);
 
-  // regen
-  player.hp=Math.min(player.maxHp,player.hp+player.regen);
+monsters.forEach(m=>{
+let dx=player.x-m.x,dy=player.y-m.y;
+let d=Math.hypot(dx,dy);
+m.x+=dx/d*m.speed+m.kbx;
+m.y+=dy/d*m.speed+m.kby;
+m.kbx*=0.85;m.kby*=0.85;
+if(d<30&&player.atkCd===0){
+m.hp-=player.atk;
+m.flash=6;
+m.kbx=-dx/d*5;
+m.kby=-dy/d*5;
+player.atkCd=18;
+}
+if(d<22)player.hp-=m.atk*0.02;
+m.flash=Math.max(0,m.flash-1);
+});
 
-  // monsters
-  monsters.forEach(m=>{
-    let dx=player.x-m.x, dy=player.y-m.y;
-    let d=Math.hypot(dx,dy);
-    if(d>5){
-      m.x+=dx/d*m.speed;
-      m.y+=dy/d*m.speed;
-    }
-    // auto attack player
-    if(d<24 && m.cd<=0){
-      player.hp-=m.atk;
-      m.cd=60;
-    }
-    if(m.cd>0)m.cd--;
-    // auto attack monster
-    if(d<28){
-      m.hp-=player.atk*0.02;
-    }
-  });
+monsters=monsters.filter(m=>{
+if(m.hp<=0){
+for(let i=0;i<5;i++)
+coins.push({x:m.x,y:m.y,vx:Math.random()*2-1,vy:Math.random()*-2});
+player.exp+=10;
+return false;
+}
+return true;
+});
 
-  // deaths
-  monsters=monsters.filter(m=>{
-    if(m.hp<=0){
-      player.gold+=10;
-      return false;
-    }
-    return true;
-  });
+coins.forEach(c=>{
+let dx=player.x-c.x,dy=player.y-c.y;
+let d=Math.hypot(dx,dy);
+if(d<120){c.vx+=dx/d*0.2;c.vy+=dy/d*0.2}
+c.x+=c.vx;c.y+=c.vy;
+});
 
-  if(monsters.length<5+wave){
-    spawnMonster();
-  }
+coins=coins.filter(c=>{
+if(Math.hypot(player.x-c.x,player.y-c.y)<16){
+player.gold++;return false
+}
+return true;
+});
 
-  // UI
-  hp.textContent=Math.floor(player.hp)+"/"+player.maxHp;
-  atk.textContent=player.atk;
-  gold.textContent=player.gold;
-  wave.textContent=wave;
+if(player.exp>=player.lvl*50){
+player.exp=0;player.lvl++;
+if(player.lvl%5===0)difficulty+=0.4;
 }
 
-/* ---------- DRAW ---------- */
+if(Date.now()-lastWave>20000){
+wave++;lastWave=Date.now();
+for(let i=0;i<wave+2;i++)spawnMonster();
+}
+
+player.hp=Math.max(0,player.hp);
+}
+
 function draw(){
-  ctx.clearRect(0,0,c.width,c.height);
-  let cx=Math.floor(player.x/TILE);
-  let cy=Math.floor(player.y/TILE);
+ctx.clearRect(0,0,c.width,c.height);
+let b=BIOMES[biomeAt(player.x,player.y)];
+ctx.fillStyle=b.c;
+ctx.fillRect(0,0,c.width,c.height);
 
-  for(let y=-VIEW;y<VIEW;y++){
-    for(let x=-VIEW;x<VIEW;x++){
-      let t=tile(cx+x,cy+y);
-      if(t==="grass")ctx.fillStyle="#4ade80";
-      if(t==="rock")ctx.fillStyle="#a3a3a3";
-      if(t==="water")ctx.fillStyle="#38bdf8";
-      ctx.fillRect(
-        c.width/2+(x*TILE)-(player.x%TILE),
-        c.height/2+(y*TILE)-(player.y%TILE),
-        TILE,TILE
-      );
-    }
-  }
+let px=c.width/2,py=c.height/2;
 
-  // player
-  ctx.fillStyle="#fde68a";
-  ctx.fillRect(c.width/2-6,c.height/2-10,12,12);
-  ctx.fillStyle="#2563eb";
-  ctx.fillRect(c.width/2-8,c.height/2+2,16,16);
+// player
+ctx.fillStyle="#fde68a";
+ctx.fillRect(px-4,py-12,8,8);
+ctx.fillStyle="#2563eb";
+ctx.fillRect(px-6,py-4,12,14);
+ctx.fillStyle="#9ca3af";
+ctx.fillRect(px+6,py-2,10,2);
 
-  // monsters
-  monsters.forEach(m=>{
-    let sx=c.width/2+(m.x-player.x);
-    let sy=c.height/2+(m.y-player.y);
-    ctx.fillStyle="#dc2626";
-    ctx.fillRect(sx-8,sy-8,16,16);
-    ctx.fillStyle="#22c55e";
-    ctx.fillRect(sx-10,sy-14,(m.hp/m.maxHp)*20,3);
-    ctx.fillStyle="#fff";
-    ctx.fillText(Math.floor(m.hp),sx-6,sy-16);
-  });
+// monsters
+monsters.forEach(m=>{
+let sx=px+(m.x-player.x),sy=py+(m.y-player.y);
+ctx.fillStyle=m.flash?"#fff":
+m.type==="slime"?"#22c55e":
+m.type==="wolf"?"#78350f":"#dc2626";
+ctx.fillRect(sx-6,sy-6,12,12);
+ctx.fillStyle="#22c55e";
+ctx.fillRect(sx-8,sy-10,(m.hp/m.maxHp)*16,3);
+});
+
+// coins
+ctx.fillStyle="#facc15";
+coins.forEach(c=>{
+ctx.fillRect(px+(c.x-player.x)-2,py+(c.y-player.y)-2,4,4);
+});
+
+// minimap
+mctx.clearRect(0,0,120,120);
+mctx.fillStyle=b.c;
+mctx.fillRect(0,0,120,120);
+mctx.fillStyle="#fff";
+mctx.fillRect(58,58,4,4);
+monsters.forEach(m=>{
+let x=60+(m.x-player.x)/20,y=60+(m.y-player.y)/20;
+if(x>0&&x<120&&y>0&&y<120)mctx.fillRect(x,y,2,2);
+});
 }
 
-document.addEventListener("dblclick",openShop);
+function loop(){
+update();draw();
+hp.textContent=Math.floor(player.hp)+"/"+player.maxHp;
+atk.textContent=player.atk;
+gold.textContent=player.gold;
+lvl.textContent=player.lvl;
+biome.textContent=BIOMES[biomeAt(player.x,player.y)].n;
+wave.textContent=wave;
+requestAnimationFrame(loop);
+}
+loop();
 </script>
 </body>
 </html>
