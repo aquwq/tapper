@@ -3,124 +3,216 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mini RPG Walker</title>
+<title>PIXEL ROGUE</title>
+
 <style>
-html,body{margin:0;padding:0;background:#1a1a1a;color:#fff;font-family:Arial}
-#ui{padding:10px;text-align:center}
-#stats{display:flex;justify-content:center;gap:15px;font-size:14px}
-#game{display:flex;justify-content:center;margin-top:10px}
-canvas{background:#2b2b2b;border-radius:12px}
-button{margin:5px;padding:10px 16px;border-radius:10px;font-size:16px}
-#block{color:#ff5555;margin-top:10px}
+html,body{
+  margin:0;
+  background:#0b0e14;
+  color:#e5e7eb;
+  font-family:monospace;
+  user-select:none;
+}
+#ui{
+  padding:6px;
+  text-align:center;
+  font-size:14px;
+}
+#stats span{margin:0 6px}
+canvas{
+  display:block;
+  margin:0 auto;
+  background:#141925;
+  image-rendering:pixelated;
+  border-radius:12px;
+}
+button{
+  background:#1f2937;
+  color:#fff;
+  border:1px solid #374151;
+  border-radius:8px;
+  padding:6px 10px;
+  margin:4px;
+}
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.75);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.panel{
+  background:#111827;
+  padding:16px;
+  border-radius:12px;
+  width:90%;
+  max-width:300px;
+  text-align:center;
+}
 </style>
 </head>
 <body>
+
 <div id="ui">
-  <h3>🗺 Mini RPG Walker</h3>
   <div id="stats">
-    <div>LVL: <span id="lvl">1</span></div>
-    <div>XP: <span id="xp">0</span></div>
-    <div>HP: <span id="hp">10</span></div>
-    <div>GOLD: <span id="gold">0</span></div>
-    <div>TIME: <span id="time">0</span>s</div>
+    ❤️ <span id="hp"></span>
+    ⚔️ <span id="atk"></span>
+    ⭐ <span id="lvl"></span>
+    💰 <span id="gold"></span>
+    🌊 <span id="wave"></span>
+    ⏱ <span id="time"></span>s
   </div>
 </div>
-<div id="game">
-  <canvas id="c" width="300" height="300"></canvas>
-</div>
+
+<canvas id="game" width="320" height="480"></canvas>
+
 <div style="text-align:center">
-  <p id="block"></p>
+  <button onclick="attack()">АТАКА</button>
+  <button onclick="shop()">МАГАЗИН</button>
+  <button onclick="heal()">ХИЛКА</button>
+</div>
+
+<div id="overlay">
+  <div class="panel" id="panel"></div>
 </div>
 
 <script>
-const c = document.getElementById("c");
+const c = document.getElementById("game");
 const ctx = c.getContext("2d");
 
-let player = {x:140,y:140,lvl:1,xp:0,hp:10,gold:0};
+let startTime = Date.now();
+let locked = false;
+
+let player = {
+  x:160,y:240,
+  hp:30,maxHp:30,
+  atk:4,
+  lvl:1,xp:0,
+  gold:0
+};
+
+let potions = 2;
+let wave = 1;
 let monsters = [];
-let start = Date.now();
-let blocked = false;
 
-function spawnMonster(){
-  monsters.push({
-    x:Math.random()*260+20,
-    y:Math.random()*260+20,
-    hp:3+player.lvl
-  });
+function spawnWave(){
+  monsters=[];
+  for(let i=0;i<wave+1;i++){
+    monsters.push({
+      x:Math.random()*280+20,
+      y:Math.random()*440+20,
+      hp:8+wave*3,
+      maxHp:8+wave*3
+    });
+  }
+}
+spawnWave();
+
+function drawPixel(x,y,color){
+  ctx.fillStyle=color;
+  ctx.fillRect(x,y,8,8);
 }
 
-spawnMonster();
-
-function draw(){
-  ctx.clearRect(0,0,300,300);
-  // player
-  ctx.fillStyle="#4caf50";
-  ctx.fillRect(player.x,player.y,20,20);
-  // monsters
-  ctx.fillStyle="#f44336";
-  monsters.forEach(m=>ctx.fillRect(m.x,m.y,20,20));
+function drawPlayer(){
+  drawPixel(player.x,player.y,"#fde68a"); // head
+  drawPixel(player.x,player.y+8,"#3b82f6"); // body
+  drawPixel(player.x-8,player.y+8,"#1e40af");
+  drawPixel(player.x+8,player.y+8,"#1e40af");
 }
 
-function updateUI(){
-  lvl.textContent=player.lvl;
-  xp.textContent=player.xp;
-  hp.textContent=player.hp;
-  gold.textContent=player.gold;
+function drawMonster(m){
+  drawPixel(m.x,m.y,"#ef4444");
+  drawPixel(m.x-8,m.y,"#991b1b");
+  ctx.fillStyle="#22c55e";
+  ctx.fillRect(m.x-12,m.y-10,(m.hp/m.maxHp)*24,3);
 }
 
-document.addEventListener("keydown",e=>{
-  if(blocked) return;
-  const s=5;
-  if(e.key==="ArrowUp")player.y-=s;
-  if(e.key==="ArrowDown")player.y+=s;
-  if(e.key==="ArrowLeft")player.x-=s;
-  if(e.key==="ArrowRight")player.x+=s;
-  checkCombat();
-});
+function update(){
+  ctx.clearRect(0,0,c.width,c.height);
 
-c.addEventListener("touchstart",e=>{
-  if(blocked) return;
-  const t=e.touches[0];
-  player.x=t.clientX-c.offsetLeft;
-  player.y=t.clientY-c.offsetTop;
-  checkCombat();
-});
+  drawPlayer();
+  monsters.forEach(drawMonster);
 
-function checkCombat(){
+  document.getElementById("hp").textContent = player.hp+"/"+player.maxHp;
+  document.getElementById("atk").textContent = player.atk;
+  document.getElementById("lvl").textContent = player.lvl;
+  document.getElementById("gold").textContent = player.gold;
+  document.getElementById("wave").textContent = wave;
+  document.getElementById("time").textContent =
+    Math.floor((Date.now()-startTime)/1000);
+
+  if(!locked && Date.now()-startTime > 300000){
+    locked = true;
+    show("🔒 Подпишись на каналы и напиши боту /continue");
+  }
+
+  requestAnimationFrame(update);
+}
+update();
+
+function attack(){
   monsters.forEach((m,i)=>{
-    if(Math.abs(player.x-m.x)<20 && Math.abs(player.y-m.y)<20){
-      m.hp--;
+    if(Math.abs(player.x-m.x)<24 && Math.abs(player.y-m.y)<24){
+      m.hp -= player.atk;
       if(m.hp<=0){
         monsters.splice(i,1);
+        player.gold+=5;
         player.xp++;
-        player.gold++;
-        if(player.xp>=player.lvl*5){
+        if(player.xp>=player.lvl*3){
           player.lvl++;
-          player.hp+=2;
-        }
-        spawnMonster();
-      } else {
-        player.hp--;
-        if(player.hp<=0){
-          blocked=true;
-          block.textContent="💀 Ты погиб. Обнови страницу.";
+          player.atk++;
+          player.maxHp+=5;
+          player.hp=player.maxHp;
         }
       }
     }
   });
+  if(monsters.length===0){
+    wave++;
+    spawnWave();
+  }
 }
 
-setInterval(()=>{
-  draw();
-  updateUI();
-  let t=Math.floor((Date.now()-start)/1000);
-  time.textContent=t;
-  if(t>=300 && !blocked){
-    blocked=true;
-    block.textContent="🔒 Чтобы продолжить игру — подпишись и напиши боту /continue";
+function heal(){
+  if(potions>0){
+    potions--;
+    player.hp=Math.min(player.maxHp,player.hp+15);
   }
-},100);
+}
 
+function shop(){
+  show(`
+    <h3>МАГАЗИН</h3>
+    🧪 Хилка (+1) — 10💰<br>
+    <button onclick="buyPotion()">Купить</button><br><br>
+    ⚔️ Урон +1 — 20💰<br>
+    <button onclick="buyAtk()">Купить</button><br><br>
+    <button onclick="close()">Закрыть</button>
+  `);
+}
+
+function buyPotion(){
+  if(player.gold>=10){player.gold-=10;potions++;}
+}
+function buyAtk(){
+  if(player.gold>=20){player.gold-=20;player.atk++;}
+}
+
+function show(t){
+  overlay.style.display="flex";
+  panel.innerHTML=t;
+}
+function close(){
+  overlay.style.display="none";
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft")player.x-=8;
+  if(e.key==="ArrowRight")player.x+=8;
+  if(e.key==="ArrowUp")player.y-=8;
+  if(e.key==="ArrowDown")player.y+=8;
+});
 </script>
 </body>
 </html>
