@@ -3,37 +3,124 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tapper Mini Game</title>
+<title>Mini RPG Walker</title>
 <style>
-body{margin:0;font-family:Arial;text-align:center;background:#111;color:#fff}
-button{font-size:24px;padding:16px 24px;border-radius:14px}
-#box{margin-top:30px}
+html,body{margin:0;padding:0;background:#1a1a1a;color:#fff;font-family:Arial}
+#ui{padding:10px;text-align:center}
+#stats{display:flex;justify-content:center;gap:15px;font-size:14px}
+#game{display:flex;justify-content:center;margin-top:10px}
+canvas{background:#2b2b2b;border-radius:12px}
+button{margin:5px;padding:10px 16px;border-radius:10px;font-size:16px}
+#block{color:#ff5555;margin-top:10px}
 </style>
 </head>
 <body>
-<h2>👾 TAP GAME</h2>
-<p>Тапай сколько хочешь</p>
-<button onclick="tap()">TAP</button>
-<div id="box">
-<p id="xp">XP: 0</p>
-<p id="time">Time: 0s</p>
+<div id="ui">
+  <h3>🗺 Mini RPG Walker</h3>
+  <div id="stats">
+    <div>LVL: <span id="lvl">1</span></div>
+    <div>XP: <span id="xp">0</span></div>
+    <div>HP: <span id="hp">10</span></div>
+    <div>GOLD: <span id="gold">0</span></div>
+    <div>TIME: <span id="time">0</span>s</div>
+  </div>
 </div>
+<div id="game">
+  <canvas id="c" width="300" height="300"></canvas>
+</div>
+<div style="text-align:center">
+  <p id="block"></p>
+</div>
+
 <script>
-let xp=0,start=Date.now(),blocked=false;
-function tap(){
- if(blocked)return;
- xp++;xpEl.innerText="XP: "+xp;
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+
+let player = {x:140,y:140,lvl:1,xp:0,hp:10,gold:0};
+let monsters = [];
+let start = Date.now();
+let blocked = false;
+
+function spawnMonster(){
+  monsters.push({
+    x:Math.random()*260+20,
+    y:Math.random()*260+20,
+    hp:3+player.lvl
+  });
 }
+
+spawnMonster();
+
+function draw(){
+  ctx.clearRect(0,0,300,300);
+  // player
+  ctx.fillStyle="#4caf50";
+  ctx.fillRect(player.x,player.y,20,20);
+  // monsters
+  ctx.fillStyle="#f44336";
+  monsters.forEach(m=>ctx.fillRect(m.x,m.y,20,20));
+}
+
+function updateUI(){
+  lvl.textContent=player.lvl;
+  xp.textContent=player.xp;
+  hp.textContent=player.hp;
+  gold.textContent=player.gold;
+}
+
+document.addEventListener("keydown",e=>{
+  if(blocked) return;
+  const s=5;
+  if(e.key==="ArrowUp")player.y-=s;
+  if(e.key==="ArrowDown")player.y+=s;
+  if(e.key==="ArrowLeft")player.x-=s;
+  if(e.key==="ArrowRight")player.x+=s;
+  checkCombat();
+});
+
+c.addEventListener("touchstart",e=>{
+  if(blocked) return;
+  const t=e.touches[0];
+  player.x=t.clientX-c.offsetLeft;
+  player.y=t.clientY-c.offsetTop;
+  checkCombat();
+});
+
+function checkCombat(){
+  monsters.forEach((m,i)=>{
+    if(Math.abs(player.x-m.x)<20 && Math.abs(player.y-m.y)<20){
+      m.hp--;
+      if(m.hp<=0){
+        monsters.splice(i,1);
+        player.xp++;
+        player.gold++;
+        if(player.xp>=player.lvl*5){
+          player.lvl++;
+          player.hp+=2;
+        }
+        spawnMonster();
+      } else {
+        player.hp--;
+        if(player.hp<=0){
+          blocked=true;
+          block.textContent="💀 Ты погиб. Обнови страницу.";
+        }
+      }
+    }
+  });
+}
+
 setInterval(()=>{
- let t=Math.floor((Date.now()-start)/1000);
- timeEl.innerText="Time: "+t+"s";
- if(t>=300 && !blocked){
-   blocked=true;
-   alert("Чтобы продолжить игру — подпишись на каналы и напиши боту /continue");
- }
-},1000);
-const xpEl=document.getElementById("xp");
-const timeEl=document.getElementById("time");
+  draw();
+  updateUI();
+  let t=Math.floor((Date.now()-start)/1000);
+  time.textContent=t;
+  if(t>=300 && !blocked){
+    blocked=true;
+    block.textContent="🔒 Чтобы продолжить игру — подпишись и напиши боту /continue";
+  }
+},100);
+
 </script>
 </body>
 </html>
