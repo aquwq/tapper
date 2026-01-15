@@ -1,126 +1,164 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Pixel Rogue — Fixed</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pixel Rogue — Ultimate Single File</title>
 <style>
-  :root{--ui-bg:rgba(2,6,23,0.66);--panel:#0b1220;--accent:#ffd166}
-  html,body{height:100%;margin:0;background:#071019;font-family:Inter,system-ui,monospace;color:#e6eef8}
-  #game{display:block; width:100%; height:100vh; image-rendering:pixelated; background:linear-gradient(#07212a,#041019)}
-  #ui {position:fixed;left:50%;top:8px;transform:translateX(-50%);background:var(--ui-bg);padding:6px 10px;border-radius:10px;display:flex;gap:12px;align-items:center;z-index:50}
-  #ui .stat{display:flex;gap:6px;align-items:center;font-size:13px}
-  button{background:#1f2937;border:1px solid rgba(255,255,255,0.04);color:#e6eef8;padding:6px 8px;border-radius:8px;cursor:pointer}
-  #panels{position:fixed;right:12px;top:60px;display:flex;flex-direction:column;gap:8px;z-index:40}
-  .panel{background:var(--panel);padding:8px;border-radius:8px;min-width:220px;font-size:13px}
-  #minimap{position:fixed;right:12px;bottom:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);z-index:40;background:#071018;width:180px;height:180px}
-  #shopModal,#invModal,#gameoverModal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--panel);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);display:none;z-index:60}
-  .shop-row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
-  @media(max-width:720px){ #ui{font-size:12px; } .panel{min-width:160px} #minimap{width:120px;height:120px} }
+:root{
+  --bg:#05121a; --panel:#0b1220; --accent:#ffd166; --muted: rgba(255,255,255,0.08);
+}
+html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,system-ui,monospace;color:#e6eef8}
+#game{display:block; width:100%; height:100vh; image-rendering:pixelated; background:linear-gradient(#071827,#031019)}
+/* UI */
+#ui{
+  position:fixed;left:50%;top:10px;transform:translateX(-50%);
+  background:rgba(2,6,23,0.6);padding:8px 12px;border-radius:12px;display:flex;gap:12px;align-items:center;z-index:60;
+  box-shadow:0 6px 18px rgba(0,0,0,0.5);
+}
+.stat{display:flex;align-items:center;gap:8px;font-size:13px}
+.stat .value{font-weight:700;color:#fff;}
+#ui .animPulse{animation:pulse 900ms ease-in-out;}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+/* panels */
+#panels{position:fixed;right:12px;top:72px;display:flex;flex-direction:column;gap:10px;z-index:55}
+.panel{background:var(--panel);padding:10px;border-radius:10px;min-width:220px;box-shadow:0 6px 18px rgba(0,0,0,0.4)}
+
+/* minimap */
+#minimap{position:fixed;right:12px;bottom:12px;border-radius:10px;border:1px solid var(--muted);z-index:55;background:#071018}
+
+/* shop/inv/gameover */
+.modal{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:var(--panel);padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);
+  z-index:80;display:none;min-width:280px;box-shadow:0 12px 36px rgba(0,0,0,0.6)
+}
+.shop-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.02)}
+button{background:#1f2937;border:1px solid rgba(255,255,255,0.04);color:#e6eef8;padding:8px 10px;border-radius:8px;cursor:pointer}
+.small{padding:6px 8px;font-size:13px;border-radius:6px}
+
+/* level up banner */
+#levelBanner{position:fixed;left:50%;top:28px;transform:translateX(-50%);display:none;z-index:70;padding:8px 14px;border-radius:10px;background:linear-gradient(90deg,#ffd166,#ffb86b);color:#081018;font-weight:800;box-shadow:0 12px 30px rgba(0,0,0,0.5)}
+
+/* damage numbers */
+.damage{position:absolute;color:#fff;font-weight:800;text-shadow:0 2px 6px rgba(0,0,0,0.6);pointer-events:none}
+
+/* responsive */
+@media(max-width:720px){ #ui{font-size:12px;padding:6px} .panel{min-width:160px} #minimap{width:140px;height:140px} }
 </style>
 </head>
 <body>
 
 <canvas id="game"></canvas>
+<canvas id="minimap" width="180" height="180"></canvas>
 
 <div id="ui">
-  <div class="stat">❤️ <span id="hp">0</span></div>
-  <div class="stat">⚔️ <span id="atk">0</span></div>
-  <div class="stat">⭐ <span id="lvl">0</span></div>
-  <div class="stat">XP <span id="xp">0</span></div>
-  <div class="stat">💰 <span id="gold">0</span></div>
-  <div class="stat">🌍 <span id="biome">—</span></div>
-  <div class="stat">⏱ <span id="time">0</span></div>
-  <button id="btnShop">Магазин</button>
-  <button id="btnInv">Инвентарь</button>
-  <button id="btnReset">New Run</button>
+  <div class="stat">❤️ <span id="hp" class="value">0</span></div>
+  <div class="stat">⚔ <span id="atk" class="value">0</span></div>
+  <div class="stat">⭐ <span id="lvl" class="value">0</span></div>
+  <div class="stat">XP <span id="xp" class="value">0</span></div>
+  <div class="stat">💰 <span id="gold" class="value">0</span></div>
+  <div class="stat">🌍 <span id="biome" class="value">—</span></div>
+  <div class="stat">⏱ <span id="time" class="value">0</span></div>
+  <button id="btnShop" class="small">Магазин</button>
+  <button id="btnInv" class="small">Инвентарь</button>
+  <button id="btnReset" class="small">New Run</button>
 </div>
 
 <div id="panels">
   <div class="panel" id="wavePanel">Wave: 1</div>
-  <div class="panel" id="hint">WASD / стрелки — движение. Удар — авто.</div>
+  <div class="panel" id="hint">WASD / стрелки — движение. Удар — авто. Персонаж смотрит влево/вправо.</div>
 </div>
 
-<canvas id="minimap"></canvas>
+<div id="levelBanner">LEVEL UP!</div>
 
 <!-- shop modal -->
-<div id="shopModal">
+<div id="shopModal" class="modal">
   <h3>Магазин</h3>
   <div class="shop-row"><div>⚔ Урон +1</div><div><button data-buy="atk">20 G</button></div></div>
-  <div class="shop-row"><div>❤ Макс HP +12</div><div><button data-buy="hp">30 G</button></div></div>
+  <div class="shop-row"><div>❤ МаксHP +12</div><div><button data-buy="hp">30 G</button></div></div>
   <div class="shop-row"><div>🧪 Хилка +1</div><div><button data-buy="potion">15 G</button></div></div>
-  <div style="text-align:right;margin-top:10px"><button id="shopClose">Закрыть</button></div>
+  <div style="text-align:right;margin-top:8px"><button id="shopClose">Закрыть</button></div>
 </div>
 
-<!-- inventory modal -->
-<div id="invModal">
+<div id="invModal" class="modal">
   <h3>Инвентарь</h3>
   <div>Potions: <span id="invPotions">0</span></div>
-  <div style="margin-top:8px;text-align:right"><button id="usePotion">Использовать хилку</button></div>
+  <div style="margin-top:8px"><button id="usePotion">Использовать хилку</button></div>
 </div>
 
-<!-- game over modal -->
-<div id="gameoverModal">
+<div id="gameoverModal" class="modal">
   <h2>Ты погиб</h2>
   <div id="gameoverStats"></div>
-  <div style="margin-top:8px;text-align:right"><button id="goRestart">Restart</button></div>
+  <div style="text-align:right;margin-top:8px"><button id="goRestart">Restart</button></div>
 </div>
 
 <script>
-/* ===== Pixel Rogue — Fixed & Polished Single File =====
-Fixes applied:
-- minimap layout bug (fixed CSS and canvas size)
-- no duplicate / broken spawnMonsterOfType functions
-- chunk generation: preload radius, async generateChunk, fade-in alpha, low-detail draw to avoid pop-in
-- findSpawnPoint to avoid spawning inside obstacles
-- tryMoveEntity fractional steps to avoid getting stuck
-- monsters present and balanced (weaker early)
-- invulnerability frames, attack cooldowns, particle/coin caps
-- shop & inventory buttons fixed
-- saving/loading player minimal state
-*/
-
-/* --------- Config --------- */
-const cfg = {
-  tileSize: 32,
-  chunkSize: 512,
-  preloadRadius: 3,         // preload radius (was too small)
-  waveInterval: 20000,
-  initialMonsters: 4,
-  monsterCap: 80,
-  coinCap: 200,
-  particleCap: 400,
-  chunkFadeMs: 600,
-  saveKey: 'pixel_rogue_fixed_v1'
+/* ================= CONFIG - tweak these to rebalance / change visuals ================= */
+const CONFIG = {
+  PIXEL_SCALE: 2,         // overall pixel scale for sprites (higher => more detailed)
+  DPR: Math.max(1, Math.floor(window.devicePixelRatio || 1)),
+  WORLD_CHUNK: 512,
+  PRELOAD_RADIUS: 3,
+  WAVE_INTERVAL: 20000,
+  INITIAL_MONSTERS: 4,
+  MAX_MONSTERS: 90,
+  MAX_COINS: 240,
+  MAX_PARTICLES: 500,
+  CHUNK_FADE_MS: 600,
+  SAVE_KEY: 'pixel_rogue_ultimate_v1'
 };
+/* ===================================================================================== */
 
-/* --------- Canvas & UI --------- */
-const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
-const minimap = document.getElementById('minimap'), mctx = minimap.getContext('2d');
-let W = innerWidth, H = innerHeight;
-function resize(){ W = innerWidth; H = innerHeight; canvas.width = W; canvas.height = H; minimap.width = parseInt(getComputedStyle(minimap).width); minimap.height = parseInt(getComputedStyle(minimap).height); }
-addEventListener('resize', resize); resize();
+/* ---------- Canvas & UI setup ---------- */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const mini = document.getElementById('minimap');
+const mctx = mini.getContext('2d');
 
-const ui = {
+function resize(){
+  const cssW = Math.max(800, window.innerWidth);
+  const cssH = Math.max(600, window.innerHeight);
+  // internal resolution scaled by DPR for crispness
+  canvas.width = Math.round(cssW * CONFIG.DPR);
+  canvas.height = Math.round(cssH * CONFIG.DPR);
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(CONFIG.DPR,0,0,CONFIG.DPR,0,0);
+  // minimap style size handled in HTML/CSS; canvas internal resolution:
+  mini.width = parseInt(getComputedStyle(mini).width) * CONFIG.DPR;
+  mini.height = parseInt(getComputedStyle(mini).height) * CONFIG.DPR;
+  mctx.setTransform(CONFIG.DPR,0,0,CONFIG.DPR,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* UI elems */
+const UI = {
   hp: document.getElementById('hp'),
   atk: document.getElementById('atk'),
   lvl: document.getElementById('lvl'),
   xp: document.getElementById('xp'),
   gold: document.getElementById('gold'),
   biome: document.getElementById('biome'),
-  time: document.querySelector('#ui [id="time"]') || document.getElementById('time'),
+  time: document.getElementById('time'),
   wavePanel: document.getElementById('wavePanel'),
+  levelBanner: document.getElementById('levelBanner'),
   shopModal: document.getElementById('shopModal'),
   invModal: document.getElementById('invModal'),
   gameover: document.getElementById('gameoverModal')
 };
 
-/* --------- State --------- */
+/* ---------- Game state ---------- */
 let state = {
   player: {
-    x: 0, y: 0, vx:0, vy:0, facing:0,
-    hp: 120, maxHp: 120, atk: 8, atkCd:0, atkRange:44,
-    speed: 2.8, invul:0, lvl:1, exp:0, gold:0
+    x: 0, y: 0, vx:0, vy:0,
+    facing: 1,        // -1 left, +1 right
+    hp: 150, maxHp:150,
+    atk: 9, atkCd:0, atkRange:46,
+    speed: 2.9, invul:0,
+    lvl:1, exp:0, gold:0
   },
   inventory: { potions: 2 },
   monsters: [],
@@ -130,113 +168,88 @@ let state = {
   wave: 1,
   lastWaveAt: performance.now(),
   running: true,
-  difficultyMult: 1,
+  difficulty: 1.0,
   startedAt: performance.now()
 };
 
-/* --------- Noise & Biomes --------- */
+/* ---------- Utility functions ---------- */
+const rand = (a,b)=> Math.random()*(b-a)+a;
+const clamp = (v,a,b)=> Math.max(a, Math.min(b, v));
+const now = ()=> performance.now();
+
+/* ---------- Noise & Biomes ---------- */
 function hash(x,y){ return Math.abs(Math.sin(x*127.1 + y*311.7) * 43758.5453) % 1; }
 function lerp(a,b,t){ return a + (b-a)*t; }
 function smoothNoise(x,y){
   const xi=Math.floor(x), yi=Math.floor(y);
   const xf=x-xi, yf=y-yi;
-  const v00=hash(xi,yi), v10=hash(xi+1,yi), v01=hash(xi,yi+1), v11=hash(xi+1,yi+1);
-  const u=xf*xf*(3-2*xf), v=yf*yf*(3-2*yf);
+  const v00 = hash(xi, yi), v10 = hash(xi+1, yi), v01 = hash(xi, yi+1), v11 = hash(xi+1, yi+1);
+  const u = xf*xf*(3-2*xf), v = yf*yf*(3-2*yf);
   return lerp( lerp(v00,v10,u), lerp(v01,v11,u), v );
 }
 function biomeAt(x,y){
-  const n = smoothNoise(x*0.0016, y*0.0016);
+  const n = smoothNoise(x*0.0015, y*0.0015);
   if(n < 0.33) return 0;
   if(n < 0.66) return 1;
   return 2;
 }
 const BIOMES = [
-  {id:0,name:'Луг',color:'#6EE7B7',types:['slime']},
-  {id:1,name:'Лес',color:'#34D399',types:['wolf']},
-  {id:2,name:'Проклятый',color:'#FCA5A5',types:['imp','demon']}
+  {id:0, name:'Луг', color:'#9AE6B4', types:['slime']},
+  {id:1, name:'Лес', color:'#5EEAD4', types:['wolf']},
+  {id:2, name:'Проклятый', color:'#FCA5A5', types:['imp','demon']}
 ];
 
-/* --------- Chunks (async safe) --------- */
-function chunkKey(cx,cy){ return cx + ',' + cy; }
+/* ---------- Chunks with async generation + fade-in ---------- */
+function chunkKey(cx,cy){ return `${cx},${cy}`; }
 function ensureChunk(cx,cy){
   const key = chunkKey(cx,cy);
   if(state.chunks.has(key)) return state.chunks.get(key);
-  const chunk = {cx,cy,creating:true,objects:[],alpha:0,created:performance.now(),biome:null};
+  const chunk = {cx,cy,objects:[],created:now(),alpha:0,creating:true};
   state.chunks.set(key, chunk);
-  // generate async shortly to avoid frame blocking; setTimeout to stagger many requests
-  setTimeout(()=>{ if(!chunk.pregen) generateChunk(chunk); }, 25 + Math.random()*120);
+  setTimeout(()=> generateChunk(chunk), 12 + Math.random()*120); // stagger generation
   return chunk;
 }
 function generateChunk(chunk){
   if(!chunk) return;
-  // avoid re-generation
   if(!chunk.creating && chunk.objects.length) return;
   chunk.creating = false;
-  const {cx,cy} = chunk;
-  const baseX = cx * cfg.chunkSize, baseY = cy * cfg.chunkSize;
-  const centerX = baseX + cfg.chunkSize/2, centerY = baseY + cfg.chunkSize/2;
+  const baseX = chunk.cx * CONFIG.WORLD_CHUNK, baseY = chunk.cy * CONFIG.WORLD_CHUNK;
+  const centerX = baseX + CONFIG.WORLD_CHUNK/2, centerY = baseY + CONFIG.WORLD_CHUNK/2;
   const bId = biomeAt(centerX, centerY);
   chunk.biome = bId;
-  const count = 5 + Math.floor(Math.abs(hash(cx,cy))*6);
+  const count = 5 + Math.floor(Math.abs(hash(chunk.cx, chunk.cy))*6);
   for(let i=0;i<count;i++){
-    const rx = baseX + Math.random()*cfg.chunkSize;
-    const ry = baseY + Math.random()*cfg.chunkSize;
+    const rx = baseX + Math.random()*CONFIG.WORLD_CHUNK;
+    const ry = baseY + Math.random()*CONFIG.WORLD_CHUNK;
     const r = Math.random();
     let type = 'rock';
-    if(bId === 0) type = r < 0.6 ? 'tree' : (r < 0.9 ? 'rock' : 'pond');
-    else if(bId === 1) type = r < 0.7 ? 'tree' : 'rock';
+    if(bId===0) type = r < 0.6 ? 'tree' : (r < 0.92 ? 'rock' : 'pond');
+    else if(bId===1) type = r < 0.7 ? 'tree' : 'rock';
     else type = r < 0.5 ? 'ruin' : 'wall';
-    const size = (type==='tree'?20:type==='rock'?14:type==='pond'?40:26);
+    const size = (type==='tree'?22:type==='rock'?14:type==='pond'?40:26);
     chunk.objects.push({type, x: rx, y: ry, r: size});
   }
-  chunk.created = performance.now();
+  chunk.created = now();
   chunk.alpha = 0;
 }
 
-/* Preload neighbors gradually */
-function preloadNearbyChunks(){
-  const px = Math.floor(state.player.x / cfg.chunkSize);
-  const py = Math.floor(state.player.y / cfg.chunkSize);
-  for(let dx=-cfg.preloadRadius; dx<=cfg.preloadRadius; dx++){
-    for(let dy=-cfg.preloadRadius; dy<=cfg.preloadRadius; dy++){
-      ensureChunk(px + dx, py + dy);
+/* preload */
+function preloadNearby(){
+  const pcx = Math.floor(state.player.x / CONFIG.WORLD_CHUNK), pcy = Math.floor(state.player.y / CONFIG.WORLD_CHUNK);
+  for(let dx=-CONFIG.PRELOAD_RADIUS; dx<=CONFIG.PRELOAD_RADIUS; dx++){
+    for(let dy=-CONFIG.PRELOAD_RADIUS; dy<=CONFIG.PRELOAD_RADIUS; dy++){
+      ensureChunk(pcx+dx, pcy+dy);
     }
   }
 }
 
-/* --------- Spawn & entity factory (single working implementation) --------- */
-function spawnMonsterOfType(type, x, y, boss=false){
-  const templates = {
-    slime: {hp:28, speed:0.5, atk:3, size:14},
-    wolf:  {hp:20, speed:1.15, atk:4, size:12},
-    imp:   {hp:24, speed:0.85, atk:3, size:12, ranged:true},
-    demon: {hp:60, speed:0.6, atk:8, size:18},
-    boss:  {hp:220, speed:0.6, atk:14, size:28}
-  };
-  const tpl = templates[type] || templates.slime;
-  const angle = Math.random()*Math.PI*2;
-  const sx = (x === undefined) ? state.player.x + Math.cos(angle) * (260 + Math.random()*160) : x;
-  const sy = (y === undefined) ? state.player.y + Math.sin(angle) * (260 + Math.random()*160) : y;
-  const m = {
-    id: Math.random().toString(36).slice(2,9),
-    type, x: sx, y: sy, vx:0, vy:0, kbx:0, kby:0,
-    hp: Math.round(tpl.hp * state.difficultyMult),
-    maxHp: Math.round(tpl.hp * state.difficultyMult),
-    atk: Math.round(tpl.atk * state.difficultyMult),
-    speed: tpl.speed, size: tpl.size, ranged: !!tpl.ranged,
-    hitCd:0, flash:0, boss: !!boss, anim:{t:Math.random()*1000}
-  };
-  state.monsters.push(m);
-  return m;
-}
-
-/* helper: find safe spawn point (not inside obstacles) */
-function collidesWithStructuresAt(x,y){
-  const cx = Math.floor(x / cfg.chunkSize), cy = Math.floor(y / cfg.chunkSize);
+/* ---------- Safe spawn & factories ---------- */
+function collidesStructuresAt(x,y){
+  const cx = Math.floor(x / CONFIG.WORLD_CHUNK), cy = Math.floor(y / CONFIG.WORLD_CHUNK);
   for(let dx=-1;dx<=1;dx++){
     for(let dy=-1;dy<=1;dy++){
-      const chunk = state.chunks.get(chunkKey(cx+dx,cy+dy));
-      if(!chunk || !chunk.objects) continue;
+      const chunk = state.chunks.get(chunkKey(cx+dx, cy+dy));
+      if(!chunk) continue;
       for(const o of chunk.objects){
         const d = Math.hypot(x - o.x, y - o.y);
         if(d < o.r + 10) return true;
@@ -245,76 +258,89 @@ function collidesWithStructuresAt(x,y){
   }
   return false;
 }
-function findSpawnPoint(minR=220, attempts=40){
-  for(let i=0;i<attempts;i++){
+function findSpawnPoint(minR=240, tries=36){
+  for(let i=0;i<tries;i++){
     const a = Math.random()*Math.PI*2;
     const r = minR + Math.random()*260;
     const x = state.player.x + Math.cos(a)*r;
     const y = state.player.y + Math.sin(a)*r;
-    if(!collidesWithStructuresAt(x,y)) return {x,y};
+    if(!collidesStructuresAt(x,y)) return {x,y};
   }
-  // fallback
+  // fallback further out
   const a = Math.random()*Math.PI*2;
-  return {x: state.player.x + Math.cos(a)*320, y: state.player.y + Math.sin(a)*320};
+  return {x: state.player.x + Math.cos(a)*340, y: state.player.y + Math.sin(a)*340};
 }
 
-/* spawn wave using findSpawnPoint */
-function spawnWave(n){
-  for(let i=0;i<n;i++){
-    const pos = findSpawnPoint();
-    const bIdx = biomeAt(state.player.x + rand(-40,40), state.player.y + rand(-40,40));
-    const type = BIOMES[bIdx].types[Math.floor(Math.random()*BIOMES[bIdx].types.length)];
-    spawnMonsterOfType(type, pos.x, pos.y);
-  }
+function spawnMonster(type, x, y, boss=false){
+  const templates = {
+    slime:{hp:34,speed:0.5,atk:3,size:14},
+    wolf:{hp:22,speed:1.14,atk:4,size:12},
+    imp:{hp:28,speed:0.9,atk:3,size:12,ranged:true},
+    demon:{hp:84,speed:0.6,atk:9,size:18},
+    boss:{hp:260,speed:0.6,atk:16,size:30}
+  };
+  const tpl = templates[type] || templates.slime;
+  const angle = Math.random()*Math.PI*2;
+  const sx = (x===undefined) ? state.player.x + Math.cos(angle)*(300 + Math.random()*200) : x;
+  const sy = (y===undefined) ? state.player.y + Math.sin(angle)*(300 + Math.random()*200) : y;
+  const m = {
+    id: Math.random().toString(36).slice(2,9),
+    type, x:sx, y:sy, vx:0, vy:0, kbx:0, kby:0,
+    hp: Math.round(tpl.hp * state.difficulty), maxHp: Math.round(tpl.hp * state.difficulty),
+    atk: Math.round(tpl.atk * state.difficulty),
+    speed: tpl.speed, size: tpl.size, ranged: !!tpl.ranged, hitCd:0, flash:0, boss:!!boss, anim:{t:Math.random()*1000}
+  };
+  state.monsters.push(m); return m;
 }
 
-/* initial gentle spawn */
-for(let i=0;i<cfg.initialMonsters;i++) spawnWave(1);
+/* ---------- Initial gentle spawn ---------- */
+for(let i=0;i<CONFIG.INITIAL_MONSTERS;i++){
+  const p = findSpawnPoint(220, 50);
+  spawnMonster('slime', p.x, p.y);
+}
 
-/* --------- Controls / Movement ---------- */
+/* ---------- Controls & movement (smooth) ---------- */
 let keys = {};
-addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+addEventListener('keydown', e=> keys[e.key.toLowerCase()]=true);
+addEventListener('keyup', e=> keys[e.key.toLowerCase()]=false);
 
-function movePlayer(dt){
-  const p = state.player;
-  let dx=0, dy=0;
-  if(keys['a']||keys['arrowleft']) dx -= 1;
-  if(keys['d']||keys['arrowright']) dx += 1;
-  if(keys['w']||keys['arrowup']) dy -= 1;
-  if(keys['s']||keys['arrowdown']) dy += 1;
-  const len = Math.hypot(dx,dy);
-  if(len > 0.001){
-    dx /= len; dy /= len;
-    p.vx = lerp(p.vx||0, dx * p.speed, 0.18);
-    p.vy = lerp(p.vy||0, dy * p.speed, 0.18);
-    // predict next pos, attempt move with sliding
-    const nx = p.x + p.vx * dt/16, ny = p.y + p.vy * dt/16;
-    tryMoveEntity(p, nx, ny);
-    p.facing = Math.atan2(dy, dx);
-  } else {
-    p.vx = lerp(p.vx||0, 0, 0.14); p.vy = lerp(p.vy||0, 0, 0.14);
-    tryMoveEntity(p, p.x + p.vx * dt/16, p.y + p.vy * dt/16);
-  }
-}
-
-/* tryMoveEntity: fractional step sliding to avoid getting stuck */
-function tryMoveEntity(e, nx, ny){
-  if(!collidesWithStructuresAt(nx, ny)){ e.x = nx; e.y = ny; return true; }
-  // fractional sliding
+/* tryMove sliding fractional */
+function tryMove(e, nx, ny){
+  if(!collidesStructuresAt(nx,ny)){ e.x = nx; e.y = ny; return true; }
   const steps = 4;
   for(let s=steps;s>0;s--){
-    const fx = e.x + (nx - e.x) * (s/steps);
-    const fy = e.y + (ny - e.y) * (s/steps);
-    if(!collidesWithStructuresAt(fx, fy)){ e.x = fx; e.y = fy; return true; }
+    const fx = e.x + (nx - e.x)*(s/steps);
+    const fy = e.y + (ny - e.y)*(s/steps);
+    if(!collidesStructuresAt(fx,fy)){ e.x = fx; e.y = fy; return true; }
   }
   return false;
 }
 
-/* ---------- Combat (player auto-attack) ---------- */
+function movePlayer(dt){
+  const p = state.player;
+  let ax=0, ay=0;
+  if(keys['a']||keys['arrowleft']) ax -= 1;
+  if(keys['d']||keys['arrowright']) ax += 1;
+  if(keys['w']||keys['arrowup']) ay -= 1;
+  if(keys['s']||keys['arrowdown']) ay += 1;
+  const len = Math.hypot(ax,ay);
+  if(len > 0.001){
+    ax /= len; ay /= len;
+    // smoothing
+    const tx = ax * p.speed, ty = ay * p.speed;
+    p.vx = lerp(p.vx||0, tx, 0.18); p.vy = lerp(p.vy||0, ty, 0.18);
+    tryMove(p, p.x + p.vx * dt/16, p.y + p.vy * dt/16);
+    if(Math.abs(p.vx) > 0.12) p.facing = p.vx < 0 ? -1 : 1;
+  } else {
+    p.vx = lerp(p.vx||0, 0, 0.14); p.vy = lerp(p.vy||0, 0, 0.14);
+    tryMove(p, p.x + p.vx * dt/16, p.y + p.vy * dt/16);
+  }
+}
+
+/* ---------- Combat: player auto attack ---------- */
 function playerAutoAttack(){
   const p = state.player;
-  if(p.atkCd > 0) { p.atkCd--; return; }
+  if(p.atkCd > 0){ p.atkCd--; return; }
   let target = null, minD = Infinity;
   for(const m of state.monsters){
     const d = Math.hypot(m.x - p.x, m.y - p.y);
@@ -323,11 +349,12 @@ function playerAutoAttack(){
   if(target){
     const dmg = p.atk + Math.floor(Math.random()*2);
     target.hp -= dmg;
-    // knockback
-    const dx = target.x - p.x, dy = target.y - p.y, d = Math.max(1, Math.hypot(dx,dy));
-    target.kbx = (dx/d)*6; target.kby = (dy/d)*6;
-    target.flash = 8;
-    spawnParticles(target.x, target.y, Math.min(10, 2 + Math.floor(dmg/2)));
+    const dx = target.x - p.x, dy = target.y - p.y, dd = Math.max(1, Math.hypot(dx,dy));
+    target.kbx = (dx/dd)*6; target.kby = (dy/dd)*6;
+    target.flash = 10;
+    // popup damage number
+    state.particles.push({type:'num', x: target.x, y: target.y - target.size - 6, vx: rand(-0.4,0.4), vy:-1.4, text:'-' + dmg, life:700, created: now()});
+    // attack cooldown shorter with level
     p.atkCd = Math.max(10, 18 - Math.floor(p.lvl/3));
   }
 }
@@ -335,200 +362,183 @@ function playerAutoAttack(){
 /* ---------- Monster AI ---------- */
 function updateMonsters(dt){
   const p = state.player;
-  if(state.monsters.length > cfg.monsterCap) state.monsters.length = cfg.monsterCap;
+  if(state.monsters.length > CONFIG.MAX_MONSTERS) state.monsters.length = CONFIG.MAX_MONSTERS;
   for(let i=state.monsters.length-1;i>=0;i--){
     const m = state.monsters[i];
     const dx = p.x - m.x, dy = p.y - m.y;
     const d = Math.hypot(dx,dy) || 1;
-    // desired velocity toward player with slight avoidance
-    let desiredVx = (dx/d)*m.speed, desiredVy = (dy/d)*m.speed;
+    // desired vector
+    let desiredX = (dx/d) * m.speed, desiredY = (dy/d) * m.speed;
+    // avoidance
     for(const other of state.monsters){
       if(other === m) continue;
-      const ddx = m.x - other.x, ddy = m.y - other.y;
-      const dd = Math.hypot(ddx,ddy) || 1;
-      if(dd < (m.size + other.size)*0.9){
-        desiredVx += (ddx/dd)*0.4; desiredVy += (ddy/dd)*0.4;
+      const ddx = m.x - other.x, ddy = m.y - other.y; const dd = Math.hypot(ddx,ddy) || 1;
+      if(dd < (m.size + other.size) * 0.9){
+        desiredX += (ddx/dd)*0.45; desiredY += (ddy/dd)*0.45;
       }
     }
-    m.vx = lerp(m.vx||0, desiredVx, 0.12);
-    m.vy = lerp(m.vy||0, desiredVy, 0.12);
-    const nx = m.x + (m.vx + (m.kbx||0))*dt/16;
-    const ny = m.y + (m.vy + (m.kby||0))*dt/16;
-    tryMoveEntity(m, nx, ny);
+    m.vx = lerp(m.vx||0, desiredX, 0.12); m.vy = lerp(m.vy||0, desiredY, 0.12);
+    tryMove(m, m.x + (m.vx + (m.kbx||0)) * dt/16, m.y + (m.vy + (m.kby||0)) * dt/16);
     m.kbx *= 0.86; m.kby *= 0.86;
-    // ranged shoots
-    if(m.ranged && Math.random() < 0.004 + state.wave*0.0008){
+    // ranged
+    if(m.ranged && Math.random() < 0.004 + state.wave * 0.0008){
       const ang = Math.atan2(p.y - m.y, p.x - m.x);
-      state.particles.push({type:'proj', x:m.x, y:m.y, vx:Math.cos(ang)*3.2, vy:Math.sin(ang)*3.2, life:1000, dmg: Math.max(1, Math.round(m.atk*0.12))});
+      state.particles.push({type:'proj', x:m.x, y:m.y, vx:Math.cos(ang)*3.1, vy:Math.sin(ang)*3.1, dmg: Math.max(1, Math.round(m.atk*0.12)), life:1000, created:now()});
     }
     // attack if close
     if(d < m.size + 14 && m.hitCd <= 0){
       if(p.invul <= 0){
         const hit = Math.max(1, Math.round(m.atk * 0.6));
         p.hp -= hit; p.invul = 36;
-        // push player
+        state.particles.push({type:'num', x:p.x, y:p.y - 20, vx:rand(-0.6,0.6), vy:-1.1, text:'-' + hit, life:700, created: now()});
         p.x += (p.x - m.x)/d * 6; p.y += (p.y - m.y)/d * 6;
       }
-      m.hitCd = 70;
+      m.hitCd = 70 + Math.random()*20;
     }
     if(m.hitCd > 0) m.hitCd--;
     if(m.flash > 0) m.flash--;
-    // death handling
+    // death
     if(m.hp <= 0){
-      // drop coins
       const drop = 2 + Math.floor(Math.random()*3);
-      for(let k=0;k<drop && state.coins.length < cfg.coinCap;k++){
-        state.coins.push({ x: m.x + rand(-8,8), y: m.y + rand(-8,8), vx: rand(-1.6,1.6), vy: rand(-3,-1), created: performance.now(), life: 6000, size: 4 + Math.random()*3 });
+      for(let k=0;k<drop && state.coins.length < CONFIG.MAX_COINS;k++){
+        state.coins.push({ x: m.x + rand(-8,8), y: m.y + rand(-8,8), vx: rand(-1.6,1.6), vy: rand(-3,-1), created: now(), life: 6000, size: 4 + Math.random()*3 });
       }
-      state.player.exp = (state.player.exp || 0) + Math.round(m.maxHp/8);
+      state.player.exp = (state.player.exp || 0) + Math.round(m.maxHp / 8);
+      state.particles.push({type:'num', x:m.x, y:m.y-8, vx:0, vy:-0.8, text:'+XP', life:900, created:now()});
       state.monsters.splice(i,1);
       continue;
     }
-    // culling: if too far, remove
+    // cull distant
     if(Math.hypot(m.x - p.x, m.y - p.y) > 3500) state.monsters.splice(i,1);
   }
 }
 
-/* ---------- Particles ---------- */
+/* ---------- Particles & numbers ---------- */
 function spawnParticles(x,y,count){
   for(let i=0;i<count;i++){
-    state.particles.push({ type:'hit', x: x + rand(-6,6), y: y + rand(-6,6), vx: rand(-2,2), vy: rand(-2,-0.5), life: 600 + Math.random()*300, created: performance.now() });
+    state.particles.push({type:'hit', x:x+rand(-6,6), y:y+rand(-6,6), vx:rand(-2,2), vy:rand(-2,-0.5), life:600+Math.random()*300, created: now()});
   }
 }
 function updateParticles(dt){
   for(let i=state.particles.length-1;i>=0;i--){
     const p = state.particles[i];
-    p.x += p.vx * dt/16; p.y += p.vy * dt/16; p.vy += 0.06 * dt/16;
-    if(performance.now() - p.created > p.life) state.particles.splice(i,1);
-    if(state.particles.length > cfg.particleCap) state.particles.splice(0, state.particles.length - cfg.particleCap);
-    // projectile collision
+    p.x += (p.vx||0) * dt/16; p.y += (p.vy||0) * dt/16;
+    p.vy += 0.06 * dt/16;
+    if(now() - p.created > (p.life || 600)) state.particles.splice(i,1);
+    // projectile hit
     if(p.type === 'proj'){
       const d = Math.hypot(p.x - state.player.x, p.y - state.player.y);
       if(d < 14 && state.player.invul <= 0){
         state.player.hp -= p.dmg || 2; state.player.invul = 36; state.particles.splice(i,1); continue;
       }
-      // collide with monsters: optional (skip)
     }
   }
+  if(state.particles.length > CONFIG.MAX_PARTICLES) state.particles.splice(0, state.particles.length - CONFIG.MAX_PARTICLES);
 }
 
 /* ---------- Coins ---------- */
 function updateCoins(dt){
   for(let i=state.coins.length-1;i>=0;i--){
     const c = state.coins[i];
-    c.vy += 0.08 * dt/16;
-    c.x += c.vx * dt/16; c.y += c.vy * dt/16;
-    const dx = state.player.x - c.x, dy = state.player.y - c.y;
-    const d = Math.hypot(dx,dy) || 1;
-    if(d < 120){
-      const pull = 0.25 * (120 - d) / 120;
-      c.vx += (dx/d) * pull * dt/16; c.vy += (dy/d) * pull * dt/16;
-    }
-    if(d < 12){
-      state.player.gold += 1;
-      state.particles.push({type:'coin',x:c.x,y:c.y,vx:0,vy:-1,life:400,created:performance.now()});
-      state.coins.splice(i,1); continue;
-    }
-    if(performance.now() - c.created > c.life) state.coins.splice(i,1);
+    c.vy += 0.08 * dt/16; c.x += c.vx * dt/16; c.y += c.vy * dt/16;
+    const dx = state.player.x - c.x, dy = state.player.y - c.y; const d = Math.hypot(dx,dy) || 1;
+    if(d < 120) { c.vx += (dx/d) * 0.25 * dt/16; c.vy += (dy/d) * 0.25 * dt/16; }
+    if(d < 12){ state.player.gold += 1; state.particles.push({type:'coin', x:c.x, y:c.y, vx:0, vy:-1, life:400, created:now()}); state.coins.splice(i,1); continue; }
+    if(now() - c.created > c.life) state.coins.splice(i,1);
   }
-  if(state.coins.length > cfg.coinCap) state.coins.length = cfg.coinCap;
+  if(state.coins.length > CONFIG.MAX_COINS) state.coins.length = CONFIG.MAX_COINS;
 }
 
 /* ---------- Waves & leveling ---------- */
 function maybeSpawnWave(){
-  const now = performance.now();
-  if(now - state.lastWaveAt >= cfg.waveInterval){
+  if(now() - state.lastWaveAt >= CONFIG.WAVE_INTERVAL){
     state.wave++; state.lastWaveAt = now;
-    const spawnCount = Math.min(50, 3 + state.wave + Math.floor(state.wave*0.4));
-    for(let i=0;i<spawnCount;i++){
+    const count = Math.min(50, 4 + state.wave + Math.floor(state.wave*0.4));
+    for(let i=0;i<count;i++){
       const p = findSpawnPoint();
       const bIdx = biomeAt(state.player.x + rand(-40,40), state.player.y + rand(-40,40));
       const type = BIOMES[bIdx].types[Math.floor(Math.random()*BIOMES[bIdx].types.length)];
-      spawnMonsterOfType(type, p.x, p.y);
+      spawnMonster(type, p.x, p.y);
     }
-    if(state.wave % 7 === 0){
-      const p = findSpawnPoint(320);
-      spawnMonsterOfType('boss', p.x, p.y, true);
-    }
+    if(state.wave % 7 === 0){ const p = findSpawnPoint(320); spawnMonster('boss', p.x, p.y, true); }
     state.player.gold += Math.round(state.wave * 0.6);
   }
 }
-
 function updateLeveling(){
   if(!state.player.exp) state.player.exp = 0;
   const need = state.player.lvl * 50;
   if(state.player.exp >= need){
-    state.player.exp -= need; state.player.lvl++; state.player.maxHp += 8; state.player.hp = Math.min(state.player.maxHp, state.player.hp + 8);
-    if(state.player.lvl % 5 === 0) state.difficultyMult *= 1.12;
-    state.player.gold += 8 + state.player.lvl;
+    state.player.exp -= need; state.player.lvl++;
+    state.player.maxHp += 10; state.player.hp = Math.min(state.player.maxHp, state.player.hp + 12);
+    if(state.player.lvl % 5 === 0) state.difficulty *= 1.12;
+    // level-up banner
+    UI.levelBanner.style.display = 'block';
+    UI.levelBanner.style.opacity = '1';
+    UI.levelBanner.style.transform = 'translate(-50%, -6px) scale(1.02)';
+    setTimeout(()=>{ UI.levelBanner.style.transition='all 800ms ease'; UI.levelBanner.style.opacity='0'; UI.levelBanner.style.transform='translate(-50%, -18px) scale(0.96)'; }, 600);
+    setTimeout(()=>{ UI.levelBanner.style.display='none'; UI.levelBanner.style.transition=''; UI.levelBanner.style.transform='translate(-50%,0)'; UI.levelBanner.style.opacity='1'; }, 1500);
   }
 }
 
-/* ---------- Save / Load (player-only) ---------- */
-function save(){
+/* ---------- Save / Load ---------- */
+function saveNow(){
   try{
-    const s = { player: state.player, inventory: state.inventory, wave: state.wave, difficultyMult: state.difficultyMult, startedAt: state.startedAt };
-    localStorage.setItem(cfg.saveKey, JSON.stringify(s));
+    const s = { player: state.player, inventory: state.inventory, wave: state.wave, difficulty: state.difficulty, startedAt: state.startedAt };
+    localStorage.setItem(CONFIG.SAVE_KEY, JSON.stringify(s));
   }catch(e){}
 }
-function load(){
+function loadNow(){
   try{
-    const s = JSON.parse(localStorage.getItem(cfg.saveKey));
-    if(s){ state.player = Object.assign(state.player, s.player); state.inventory = s.inventory || state.inventory; state.wave = s.wave || state.wave; state.difficultyMult = s.difficultyMult || state.difficultyMult; state.startedAt = s.startedAt || state.startedAt; }
+    const s = JSON.parse(localStorage.getItem(CONFIG.SAVE_KEY));
+    if(s){ state.player = Object.assign(state.player, s.player); state.inventory = s.inventory || state.inventory; state.wave = s.wave || state.wave; state.difficulty = s.difficulty || state.difficulty; state.startedAt = s.startedAt || state.startedAt; }
   }catch(e){}
 }
-load(); setInterval(save, 5000);
+loadNow(); setInterval(saveNow, 5000);
 
-/* ---------- Drawing ---------- */
+/* ---------- Rendering: higher detail pixel sprites + UI animations ---------- */
 function drawWorld(){
   const camX = state.player.x, camY = state.player.y;
-  // background tiles
-  const tile = cfg.tileSize;
-  const cols = Math.ceil(W / tile) + 4, rows = Math.ceil(H / tile) + 4;
-  const startX = Math.floor((camX - W/2) / tile) - 1, startY = Math.floor((camY - H/2)/tile) - 1;
+  // textured tiles (bigger pixel blocks for nicer look)
+  const tile = 28;
+  const cols = Math.ceil((canvas.width/CONFIG.DPR) / tile) + 4;
+  const rows = Math.ceil((canvas.height/CONFIG.DPR) / tile) + 4;
+  const startX = Math.floor((camX - (canvas.width/CONFIG.DPR)/2) / tile) - 1;
+  const startY = Math.floor((camY - (canvas.height/CONFIG.DPR)/2) / tile) - 1;
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
       const wx = (startX + x) * tile + tile/2;
       const wy = (startY + y) * tile + tile/2;
-      const b = BIOMES[biomeAt(wx, wy)];
-      ctx.fillStyle = b.color;
-      const sx = Math.round((x * tile) - ((camX - W/2) % tile));
-      const sy = Math.round((y * tile) - ((camY - H/2) % tile));
+      const bi = BIOMES[biomeAt(wx,wy)];
+      ctx.fillStyle = bi.color;
+      const sx = Math.round((x * tile) - ((camX - (canvas.width/CONFIG.DPR)/2) % tile));
+      const sy = Math.round((y * tile) - ((camY - (canvas.height/CONFIG.DPR)/2) % tile));
       ctx.fillRect(sx, sy, tile+1, tile+1);
+      if((x+y) % 3 === 0){
+        ctx.fillStyle = 'rgba(0,0,0,0.02)';
+        ctx.fillRect(sx+4, sy+4, 6,6);
+      }
     }
   }
-  // chunk objects with fade-in and low-detail if alpha < 1
-  const pcx = Math.floor(camX / cfg.chunkSize), pcy = Math.floor(camY / cfg.chunkSize);
-  for(let dx=-cfg.preloadRadius-1; dx<=cfg.preloadRadius+1; dx++){
-    for(let dy=-cfg.preloadRadius-1; dy<=cfg.preloadRadius+1; dy++){
-      const key = chunkKey(pcx+dx, pcy+dy);
-      const chunk = state.chunks.get(key);
-      if(!chunk) continue;
-      // alpha ramp
-      const age = Math.max(0, performance.now() - (chunk.created || performance.now()));
-      chunk.alpha = Math.min(1, (age / cfg.chunkFadeMs));
-      for(const o of chunk.objects){
-        const sx = Math.round(W/2 + (o.x - camX));
-        const sy = Math.round(H/2 + (o.y - camY));
-        if(sx < -100 || sx > W+100 || sy < -100 || sy > H+100) continue;
-        ctx.globalAlpha = chunk.alpha;
-        if(chunk.alpha < 0.6){
-          // low-detail placeholder (silhouette) while fading
-          ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(sx - 6, sy - 6, 12, 12);
-        } else {
-          if(o.type === 'tree'){
-            ctx.fillStyle = '#7c4a1f'; ctx.fillRect(sx-4, sy-12,8,12);
-            ctx.fillStyle = '#14532d'; ctx.fillRect(sx-14, sy-28,28,18);
-          } else if(o.type === 'rock'){
-            ctx.fillStyle = '#6b7280'; ctx.fillRect(sx - o.r/2, sy - o.r/2, o.r, o.r);
-          } else if(o.type === 'pond'){
-            ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.ellipse(sx,sy,o.r,o.r*0.6,0,0,Math.PI*2); ctx.fill();
-          } else if(o.type === 'ruin'){
-            ctx.fillStyle = '#44403c'; ctx.fillRect(sx - o.r, sy - o.r/2, o.r*2, o.r);
-            ctx.fillStyle = '#2b2b2b'; ctx.fillRect(sx - 4, sy - o.r/2 + 4, 8, o.r/2);
-          } else if(o.type === 'wall'){
-            ctx.fillStyle = '#3f3f46'; ctx.fillRect(sx - o.r/2, sy - o.r/2, o.r, o.r/3);
-          }
+  // chunk objects fade-in
+  const pcx = Math.floor(camX / CONFIG.WORLD_CHUNK), pcy = Math.floor(camY / CONFIG.WORLD_CHUNK);
+  for(let dx=-CONFIG.PRELOAD_RADIUS-1; dx<=CONFIG.PRELOAD_RADIUS+1; dx++){
+    for(let dy=-CONFIG.PRELOAD_RADIUS-1; dy<=CONFIG.PRELOAD_RADIUS+1; dy++){
+      const ch = ensureChunk(pcx+dx, pcy+dy);
+      if(!ch) continue;
+      const age = Math.max(0, now() - (ch.created || now()));
+      ch.alpha = Math.min(1, age / CONFIG.CHUNK_FADE_MS);
+      for(const o of ch.objects){
+        const sx = Math.round((canvas.width/CONFIG.DPR)/2 + (o.x - camX));
+        const sy = Math.round((canvas.height/CONFIG.DPR)/2 + (o.y - camY));
+        if(sx < -120 || sx > canvas.width/CONFIG.DPR + 120 || sy < -120 || sy > canvas.height/CONFIG.DPR + 120) continue;
+        ctx.globalAlpha = ch.alpha;
+        if(ch.alpha < 0.6){ ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(sx-6,sy-6,12,12); }
+        else {
+          if(o.type === 'tree'){ ctx.fillStyle='#7c4a1f'; ctx.fillRect(sx-4,sy-12,8,12); ctx.fillStyle='#14532d'; ctx.fillRect(sx-14,sy-28,28,18); }
+          else if(o.type === 'rock'){ ctx.fillStyle='#6b7280'; ctx.fillRect(sx - o.r/2, sy - o.r/2, o.r, o.r); }
+          else if(o.type === 'pond'){ ctx.fillStyle='#38bdf8'; ctx.beginPath(); ctx.ellipse(sx,sy,o.r,o.r*0.6,0,0,Math.PI*2); ctx.fill(); }
+          else if(o.type === 'ruin'){ ctx.fillStyle='#44403c'; ctx.fillRect(sx - o.r, sy - o.r/2, o.r*2, o.r); ctx.fillStyle='#2b2b2b'; ctx.fillRect(sx - 4, sy - o.r/2 + 4, 8, o.r/2); }
+          else if(o.type === 'wall'){ ctx.fillStyle='#3f3f46'; ctx.fillRect(sx - o.r/2, sy - o.r/2, o.r, o.r/3); }
         }
         ctx.globalAlpha = 1;
       }
@@ -536,40 +546,87 @@ function drawWorld(){
   }
 }
 
+/* Player as nicer pixel sprite (LEFT/RIGHT only) */
 function drawPlayer(){
-  const cx = W/2, cy = H/2;
+  const cx = canvas.width / (2*CONFIG.DPR), cy = canvas.height / (2*CONFIG.DPR);
+  const p = state.player;
+  const bob = Math.sin(now()/180) * 1.8;
+  // shadow
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(cx, cy+18, 18, 8, 0, 0, Math.PI*2); ctx.fill();
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(state.player.facing || 0);
-  ctx.fillStyle = '#1f2937'; ctx.fillRect(-8,8,6,10); ctx.fillRect(2,8,6,10);
-  ctx.fillStyle = '#2563eb'; ctx.fillRect(-10,-6,20,18);
-  ctx.fillStyle = '#fce8c4'; ctx.beginPath(); ctx.arc(0,-12,8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#c7c7c7'; ctx.fillRect(12,-4,26,5);
+  // legs
+  ctx.fillStyle = '#0f1724'; ctx.fillRect(cx - 9, cy + 6 + bob, 5, 10); ctx.fillRect(cx + 4, cy + 6 + bob, 5, 10);
+  // body
+  ctx.fillStyle = '#1e40af'; ctx.fillRect(cx - 10, cy - 6 + bob, 20, 18);
+  // belt
+  ctx.fillStyle = '#0f1724'; ctx.fillRect(cx - 10, cy + 2 + bob, 20, 4);
+  // head
+  ctx.fillStyle = '#fce8c4'; ctx.beginPath(); ctx.ellipse(cx, cy - 12 + bob, 7.6, 7.6, 0, 0, Math.PI*2); ctx.fill();
+  // eyes depending on facing (gives readable LEFT/RIGHT)
+  ctx.fillStyle = '#081018';
+  if(p.facing < 0){ ctx.fillRect(cx - 5, cy - 14 + bob, 2, 2); ctx.fillRect(cx - 2, cy - 14 + bob, 2, 2); }
+  else { ctx.fillRect(cx + 2, cy - 14 + bob, 2, 2); ctx.fillRect(cx + 5, cy - 14 + bob, 2, 2); }
+  // sword: drawn on facing side with swing animation (simple)
+  ctx.save(); ctx.translate(cx, cy + bob);
+  const swing = Math.max(0, (state.player.atkCd || 0) - 6) / 12; // 0..1 as swing anim
+  if(p.facing > 0){
+    ctx.fillStyle = '#c7c7c7';
+    ctx.fillRect(12 + swing*6, -3, 30 - swing*10, 6);
+    // handle
+    ctx.fillStyle = '#6b7280'; ctx.fillRect(40 - swing*8, -2, 4, 4);
+  } else {
+    ctx.fillStyle = '#c7c7c7';
+    ctx.fillRect(-42 - swing*6, -3, 30 - swing*10, 6);
+    ctx.fillStyle = '#6b7280'; ctx.fillRect(-44 + swing*8, -2, 4, 4);
+  }
   ctx.restore();
 }
 
+/* draw monsters with better pixel detail and bobbing */
 function drawMonsters(){
-  const cx = W/2, cy = H/2;
-  ctx.font = '12px monospace';
+  const cx = canvas.width / (2*CONFIG.DPR), cy = canvas.height / (2*CONFIG.DPR);
+  ctx.font = '11px monospace';
   for(const m of state.monsters){
     const sx = cx + (m.x - state.player.x), sy = cy + (m.y - state.player.y);
-    if(sx < -100 || sx > W+100 || sy < -100 || sy > H+100) continue;
-    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy+10, m.size*0.7, m.size*0.35, 0,0,Math.PI*2); ctx.fill();
-    const bob = Math.sin((performance.now() + (m.anim?.t||0))/200) * 2;
-    if(m.type === 'slime'){ ctx.fillStyle = m.flash ? '#fff' : '#10b981'; ctx.beginPath(); ctx.ellipse(sx, sy + bob, m.size, m.size*0.85,0,0,Math.PI*2); ctx.fill(); }
-    else if(m.type === 'wolf'){ ctx.fillStyle = m.flash ? '#fff' : '#7c3aed'; ctx.fillRect(sx - m.size, sy - m.size + bob, m.size*2, m.size*2); }
-    else if(m.type === 'imp'){ ctx.fillStyle = m.flash ? '#fff' : '#f97316'; ctx.beginPath(); ctx.moveTo(sx,sy-m.size+bob); ctx.lineTo(sx+m.size,sy+m.size+bob); ctx.lineTo(sx-m.size,sy+m.size+bob); ctx.closePath(); ctx.fill(); }
-    else { ctx.fillStyle = m.flash ? '#fff' : '#ef4444'; ctx.beginPath(); ctx.ellipse(sx, sy + bob, m.size*1.1, m.size*0.9,0,0,Math.PI*2); ctx.fill(); }
+    if(sx < -160 || sx > canvas.width/CONFIG.DPR + 160) continue;
+    const bob = Math.sin((now() + (m.anim?.t||0))/200) * 2;
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy + 10, m.size*0.7, m.size*0.35, 0,0,Math.PI*2); ctx.fill();
+    // body by type
+    if(m.type==='slime'){ ctx.fillStyle = m.flash ? '#fff' : '#10b981'; ctx.beginPath(); ctx.ellipse(sx, sy + bob, m.size, m.size*0.88, 0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#06121a'; ctx.fillRect(sx - 4, sy - 2 + bob, 2,2); ctx.fillRect(sx + 2, sy - 2 + bob, 2,2); }
+    else if(m.type==='wolf'){ ctx.fillStyle = m.flash ? '#fff' : '#7c3aed'; ctx.fillRect(sx - m.size, sy - m.size + bob, m.size*2, m.size*2); }
+    else if(m.type==='imp'){ ctx.fillStyle = m.flash ? '#fff' : '#f97316'; ctx.beginPath(); ctx.moveTo(sx,sy-m.size+bob); ctx.lineTo(sx+m.size,sy+m.size+bob); ctx.lineTo(sx-m.size,sy+m.size+bob); ctx.closePath(); ctx.fill(); }
+    else { ctx.fillStyle = m.flash ? '#fff' : '#ef4444'; ctx.beginPath(); ctx.ellipse(sx, sy + bob, m.size*1.05, m.size*0.95, 0,0,Math.PI*2); ctx.fill(); }
+    // hp bar
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx - m.size, sy - m.size - 12, m.size*2, 6);
     ctx.fillStyle = '#10b981'; ctx.fillRect(sx - m.size + 1, sy - m.size - 11, Math.max(0, (m.hp / m.maxHp) * (m.size*2 - 2)), 4);
+    // hp text
     ctx.fillStyle = '#fff'; ctx.fillText(Math.max(0, Math.floor(m.hp)), sx - 8, sy - m.size - 16);
   }
 }
 
-function drawCoins(){ const cx = W/2, cy = H/2; for(const c of state.coins){ const sx = cx + (c.x - state.player.x), sy = cy + (c.y - state.player.y); if(sx < -100 || sx > W+100 || sy < -100 || sy > H+100) continue; ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(sx, sy, c.size, 0, Math.PI*2); ctx.fill(); } }
-function drawParticles(){ const cx = W/2, cy = H/2; for(const p of state.particles){ const sx = cx + (p.x - state.player.x), sy = cy + (p.y - state.player.y); if(p.type === 'hit'){ ctx.fillStyle='rgba(255,200,100,0.9)'; ctx.fillRect(sx,sy,2,2);} if(p.type==='coin'){ ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(sx,sy-6,2,2);} if(p.type==='proj'){ ctx.fillStyle='#f97316'; ctx.fillRect(sx-2,sy-2,4,4);} } }
+/* draw coins/particles */
+function drawCoins(){
+  const cx = canvas.width / (2*CONFIG.DPR), cy = canvas.height / (2*CONFIG.DPR);
+  for(const c of state.coins){
+    const sx = cx + (c.x - state.player.x), sy = cy + (c.y - state.player.y);
+    if(sx < -140 || sx > canvas.width/CONFIG.DPR + 140) continue;
+    ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(sx, sy, c.size, 0, Math.PI*2); ctx.fill();
+  }
+}
+function drawParticles(){
+  const cx = canvas.width / (2*CONFIG.DPR), cy = canvas.height / (2*CONFIG.DPR);
+  for(const p of state.particles){
+    const sx = cx + (p.x - state.player.x), sy = cy + (p.y - state.player.y);
+    if(p.type === 'hit'){ ctx.fillStyle='rgba(255,200,100,0.9)'; ctx.fillRect(sx,sy,2,2); }
+    if(p.type === 'coin'){ ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(sx,sy-6,2,2); }
+    if(p.type === 'proj'){ ctx.fillStyle='#f97316'; ctx.fillRect(sx-2,sy-2,4,4); }
+    if(p.type === 'num' && p.text){ ctx.fillStyle = '#fff'; ctx.font = '12px monospace'; ctx.fillText(p.text, sx, sy); }
+  }
+}
 
+/* draw minimap */
 function drawMinimap(){
-  const mw = minimap.width, mh = minimap.height;
+  const mw = mini.width / CONFIG.DPR, mh = mini.height / CONFIG.DPR;
   mctx.clearRect(0,0,mw,mh);
   const px = state.player.x, py = state.player.y;
   for(let y=0;y<mh;y++){
@@ -580,11 +637,11 @@ function drawMinimap(){
       mctx.fillStyle = b.color; mctx.fillRect(x,y,1,1);
     }
   }
-  // draw chunk objects
-  const pcx = Math.floor(px / cfg.chunkSize), pcy = Math.floor(py / cfg.chunkSize);
+  // obstacles & monsters
+  const pcx = Math.floor(px / CONFIG.WORLD_CHUNK), pcy = Math.floor(py / CONFIG.WORLD_CHUNK);
   for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
-    const chunk = state.chunks.get(chunkKey(pcx+dx,pcy+dy)); if(!chunk) continue;
-    for(const o of chunk.objects){
+    const ch = state.chunks.get(chunkKey(pcx+dx,pcy+dy)); if(!ch) continue;
+    for(const o of ch.objects){
       const rx = Math.round(mw/2 + (o.x - px)/20), ry = Math.round(mh/2 + (o.y - py)/20);
       if(rx>=0 && rx<mw && ry>=0 && ry<mh){ mctx.fillStyle = '#000'; mctx.fillRect(rx,ry,2,2); }
     }
@@ -597,12 +654,12 @@ function drawMinimap(){
 }
 
 /* ---------- Main loop ---------- */
-let last = performance.now();
-function loop(now){
-  const dt = Math.min(40, now - last);
-  last = now;
+let last = now();
+function loop(t){
+  const dt = Math.min(40, t - last); last = t;
   if(state.running){
-    preloadNearbyChunks();
+    preloadNearby = preloadNearby || preloadNearby; // noop to hint linter
+    preloadNearby();
     movePlayer(dt);
     playerAutoAttack();
     updateMonsters(dt);
@@ -610,85 +667,76 @@ function loop(now){
     updateCoins(dt);
     maybeSpawnWave();
     updateLeveling();
-    // simple death check
+    // death handling
     if(state.player.hp <= 0){
-      state.running = false; document.getElementById('gameoverStats').innerHTML = `Level: ${state.player.lvl}<br>Wave: ${state.wave}<br>Gold: ${state.player.gold}`; document.getElementById('gameoverModal').style.display = 'block';
+      state.running = false;
+      document.getElementById('gameoverStats').innerHTML = `Level: ${state.player.lvl}<br>Wave: ${state.wave}<br>Gold: ${state.player.gold}`;
+      document.getElementById('gameoverModal').style.display = 'block';
     }
   }
-  // draw
-  ctx.clearRect(0,0,W,H);
+  // draw stage
+  ctx.clearRect(0,0, canvas.width/CONFIG.DPR, canvas.height/CONFIG.DPR);
   drawWorld();
   drawMonsters();
   drawPlayer();
   drawCoins();
   drawParticles();
   drawMinimap();
-  // UI
-  ui.hp.textContent = Math.max(0, Math.floor(state.player.hp)) + '/' + state.player.maxHp;
-  ui.atk.textContent = state.player.atk;
-  ui.lvl.textContent = state.player.lvl;
-  ui.xp.textContent = (state.player.exp || 0) + '/' + (state.player.lvl * 50);
-  ui.gold.textContent = state.player.gold;
-  ui.biome.textContent = BIOMES[biomeAt(state.player.x, state.player.y)].name;
-  ui.time.textContent = Math.floor((performance.now() - state.startedAt)/1000);
-  ui.wavePanel.textContent = 'Wave: ' + state.wave;
+  // UI updates & small animations
+  UI.hp.textContent = Math.max(0, Math.floor(state.player.hp)) + '/' + state.player.maxHp;
+  UI.atk.textContent = state.player.atk;
+  UI.lvl.textContent = state.player.lvl;
+  UI.xp.textContent = (state.player.exp || 0) + '/' + (state.player.lvl * 50);
+  UI.gold.textContent = state.player.gold;
+  UI.biome.textContent = BIOMES[biomeAt(state.player.x, state.player.y)].name;
+  UI.time.textContent = Math.floor((now() - state.startedAt)/1000);
+  UI.wavePanel.textContent = 'Wave: ' + state.wave;
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-/* ---------- Helpers ---------- */
-function rand(a,b){ return Math.random()*(b-a)+a; }
+/* ---------- small wrappers ---------- */
+function preloadNearby(){ preloadNearbyChunks(); } // alias for readability
+function preloadNearbyChunks(){ const pcx = Math.floor(state.player.x / CONFIG.WORLD_CHUNK), pcy = Math.floor(state.player.y / CONFIG.WORLD_CHUNK); for(let dx=-CONFIG.PRELOAD_RADIUS; dx<=CONFIG.PRELOAD_RADIUS; dx++){ for(let dy=-CONFIG.PRELOAD_RADIUS; dy<=CONFIG.PRELOAD_RADIUS; dy++){ ensureChunk(pcx+dx,pcy+dy); } } }
 
-/* ---------- Wave & spawn wrappers to use safe findSpawnPoint ---------- */
-function spawnMonsterSafe(type){
-  const p = findSpawnPoint();
-  spawnMonsterOfType(type, p.x, p.y);
-}
-function spawnWaveSafe(n){
-  for(let i=0;i<n;i++) spawnMonsterSafe(BIOMES[biomeAt(state.player.x, state.player.y)].types[0]);
-}
-
-/* ---------- Shop / Inventory handlers ---------- */
-document.getElementById('btnShop').addEventListener('click', ()=> { ui.shopModal.style.display = 'block'; });
-document.getElementById('shopClose').addEventListener('click', ()=> { ui.shopModal.style.display = 'none'; });
+/* ---------- UI handlers: shop/inv/restart ---------- */
+document.getElementById('btnShop').addEventListener('click', ()=> UI.shopModal.style.display='block');
+document.getElementById('shopClose').addEventListener('click', ()=> UI.shopModal.style.display='none');
 document.querySelectorAll('#shopModal [data-buy]').forEach(btn=>{
-  btn.addEventListener('click', (e)=>{
+  btn.addEventListener('click',(e)=>{
     const type = e.target.getAttribute('data-buy');
-    if(type === 'atk' && state.player.gold >= 20){ state.player.gold -= 20; state.player.atk += 1; }
-    if(type === 'hp' && state.player.gold >= 30){ state.player.gold -= 30; state.player.maxHp += 12; state.player.hp += 12; }
-    if(type === 'potion' && state.player.gold >= 15){ state.player.gold -= 15; state.inventory.potions = (state.inventory.potions||0) + 1; }
-    ui.shopModal.style.display = 'none';
+    if(type==='atk' && state.player.gold>=20){ state.player.gold -= 20; state.player.atk +=1; UI.atk.classList.add('animPulse'); setTimeout(()=>UI.atk.classList.remove('animPulse'),700); }
+    if(type==='hp' && state.player.gold>=30){ state.player.gold -= 30; state.player.maxHp +=12; state.player.hp = Math.min(state.player.maxHp, state.player.hp +12); UI.hp.classList.add('animPulse'); setTimeout(()=>UI.hp.classList.remove('animPulse'),700); }
+    if(type==='potion' && state.player.gold>=15){ state.player.gold -=15; state.inventory.potions = (state.inventory.potions||0)+1; document.getElementById('invPotions').textContent = state.inventory.potions; }
+    UI.shopModal.style.display='none';
   });
 });
-document.getElementById('btnInv').addEventListener('click', ()=> {
-  ui.invModal.style.display = ui.invModal.style.display === 'block' ? 'none' : 'block';
-  document.getElementById('invPotions').textContent = state.inventory.potions || 0;
-});
-document.getElementById('usePotion').addEventListener('click', ()=> {
-  if(state.inventory.potions > 0){ state.inventory.potions--; state.player.hp = Math.min(state.player.maxHp, state.player.hp + 60); ui.invModal.style.display = 'none'; }
-  else alert('Нет хилок');
-});
-document.getElementById('btnReset').addEventListener('click', ()=> {
-  if(confirm('Начать новую игру?')) startNewRun();
-});
-
-/* ---------- Game over handlers ---------- */
+document.getElementById('btnInv').addEventListener('click', ()=> { UI.invModal.style.display = UI.invModal.style.display==='block' ? 'none' : 'block'; document.getElementById('invPotions').textContent = state.inventory.potions || 0; });
+document.getElementById('usePotion').addEventListener('click', ()=> { if(state.inventory.potions > 0){ state.inventory.potions--; state.player.hp = Math.min(state.player.maxHp, state.player.hp + 80); UI.invModal.style.display='none'; } else alert('Нет хилок'); });
+document.getElementById('btnReset').addEventListener('click', ()=> { if(confirm('Начать новую игру?')) startNewRun(); });
 document.getElementById('goRestart').addEventListener('click', ()=> startNewRun());
 
+/* ---------- startNewRun ---------- */
 function startNewRun(){
-  state.player = { x:0,y:0,vx:0,vy:0,facing:0,hp:120,maxHp:120,atk:8,atkCd:0,atkRange:44,speed:2.8,invul:0,lvl:1,exp:0,gold:0 };
-  state.inventory = { potions:2 };
-  state.monsters.length = 0; state.coins.length = 0; state.particles.length = 0; state.chunks.clear();
-  state.wave = 1; state.lastWaveAt = performance.now(); state.running = true; state.difficultyMult = 1; state.startedAt = performance.now();
-  ui.shopModal.style.display = 'none'; ui.invModal.style.display = 'none'; ui.gameover.style.display = 'none';
-  for(let i=0;i<cfg.initialMonsters;i++) spawnWave(1);
+  state.player = { x:0,y:0,vx:0,vy:0,facing:1,hp:150,maxHp:150,atk:9,atkCd:0,atkRange:46,speed:2.9,invul:0,lvl:1,exp:0,gold:0 };
+  state.inventory = {potions:2};
+  state.monsters = []; state.coins = []; state.particles = []; state.chunks.clear();
+  state.wave = 1; state.lastWaveAt = now(); state.running = true; state.difficulty = 1; state.startedAt = now();
+  UI.shopModal.style.display='none'; UI.invModal.style.display='none'; UI.gameover.style.display='none';
+  for(let i=0;i<CONFIG.INITIAL_MONSTERS;i++){ const p = findSpawnPoint(); spawnMonster('slime', p.x, p.y); }
 }
 
-/* ---------- Misc: wave spawning scheduler ---------- */
-setInterval(()=>{ maybeSpawnWave(); }, 1000);
+/* ---------- timers and updates ---------- */
+setInterval(()=> maybeSpawnWave(), 1000);
+setInterval(()=> { updateLeveling(); saveNow(); }, 1000);
 
-/* expose quick debugging functions */
-window.SAVE_NOW = save; window.LOAD_NOW = load; window.START_NEW = startNewRun;
+/* expose some dev helpers */
+window.PRINT_STATE = ()=> console.log(state);
+window.SAVE_NOW = saveNow;
+window.LOAD_NOW = loadNow;
+window.RESTART = startNewRun;
+
+/* ============= END ============= */
 </script>
 </body>
 </html>
